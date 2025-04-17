@@ -80,7 +80,7 @@ func NewMiddleware(config ...Config) fiber.Handler {
 		app := c.App()
 		
 		// Only serve on the configured UI path
-		if c.Path() != cfg.UIPath && !strings.HasPrefix(c.Path(), cfg.UIPath+"/") {
+		if c.Path() != cfg.UIPath && !strings.HasPrefix(c.Path(), "/api/v2/"+cfg.UIPath+"/") {
 			return c.Next()
 		}
 		

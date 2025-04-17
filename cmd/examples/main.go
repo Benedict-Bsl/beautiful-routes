@@ -30,10 +30,10 @@ func main() {
 	})
 
 	// Route that returns all routes
-	app.Get("/routes", func(c *fiber.Ctx) error {
-		routes := app.GetRoutes()
-		return c.JSON(routes)
-	})
+	// app.Get("/routes", func(c *fiber.Ctx) error {
+	// 	routes := app.GetRoutes()
+	// 	return c.JSON(routes)
+	// })
 	
 	// API v1 routes
 	v1 := app.Group("/api/v1")
@@ -81,33 +81,33 @@ func main() {
 	docsConfig := fiberdocs.Config{
 		Title:       "Notification API",
 		Description: "API for sending emails, SMS, and managing alerts and reminders",
-		Version:     "1.0.0",
+		Version:     "2.0.0",
 		BasePath:    "https://api.example.com",
-		UIPath:      "/docs",
+		UIPath:      "/redocs",
 	}
 	
 	// Add extra documentation info for specific routes
-	docsConfig.AddRouteInfo("/api/v1/email/send", map[string]interface{}{
-		"description": "Send a new email",
-		"requestBody": EmailRequest{
-			To:      "user@example.com",
-			Subject: "Hello",
-			Body:    "This is a test email",
-		},
-		"responses": map[string]interface{}{
-			"201": map[string]interface{}{
-				"description": "Email queued successfully",
-				"content": EmailResponse{
-					ID:      "email123",
-					Status:  "queued",
-					Message: "Email queued for delivery",
-				},
-			},
-			"400": map[string]interface{}{
-				"description": "Invalid request",
-			},
-		},
-	})
+	// docsConfig.AddRouteInfo("/api/v1/email/send", map[string]interface{}{
+	// 	"description": "Send a new email",
+	// 	"requestBody": EmailRequest{
+	// 		To:      "user@example.com",
+	// 		Subject: "Hello",
+	// 		Body:    "This is a test email",
+	// 	},
+	// 	"responses": map[string]interface{}{
+	// 		"201": map[string]interface{}{
+	// 			"description": "Email queued successfully",
+	// 			"content": EmailResponse{
+	// 				ID:      "email123",
+	// 				Status:  "queued",
+	// 				Message: "Email queued for delivery",
+	// 			},
+	// 		},
+	// 		"400": map[string]interface{}{
+	// 			"description": "Invalid request",
+	// 		},
+	// 	},
+	// })
 	
 	// Add the docs middleware
 	app.Use(fiberdocs.New(docsConfig))

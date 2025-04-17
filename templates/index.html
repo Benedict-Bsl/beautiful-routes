@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .Config.Title }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
+    <style>
+        .route-item {
+            transition: all 0.3s ease;
+        }
+        .route-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out;
+        }
+        .route-details.expanded {
+            max-height: 1000px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        .badge-get {
+            background-color: #10B981;
+            color: white;
+        }
+        .badge-post {
+            background-color: #3B82F6;
+            color: white;
+        }
+        .badge-put {
+            background-color: #F59E0B;
+            color: white;
+        }
+        .badge-delete {
+            background-color: #EF4444;
+            color: white;
+        }
+        .badge-patch {
+            background-color: #8B5CF6;
+            color: white;
+        }
+        .badge-head {
+            background-color: #6B7280;
+            color: white;
+        }
+        .badge-options {
+            background-color: #6B7280;
+            color: white;
+        }
+        .badge-trace {
+            background-color: #6B7280;
+            color: white;
+        }
+        .badge-connect {
+            background-color: #6B7280;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto p-4">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold">{{ .Config.Title }}</h1>
+            <div class="text-sm text-gray-600">Version {{ .Config.Version }}</div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-2">API Overview</h2>
+            <p class="text-gray-700 mb-4">{{ .Config.Description }}</p>
+            <div class="text-sm text-gray-600">
+                <p><strong>Base URL:</strong> {{ .Config.BasePath }}</p>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold">Endpoints</h2>
+                <div class="flex space-x-2">
+                    <select id="filterMethod" class="text-sm border rounded px-2 py-1">
+                        <option value="">All Methods</option>
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="DELETE">DELETE</option>
+                        <option value="PATCH">PATCH</option>
+                        <option value="HEAD">HEAD</option>
+                        <option value="OPTIONS">OPTIONS</option>
+                    </select>
+                    <input type="text" id="searchEndpoint" 
+                           placeholder="Search endpoints..." 
+                           class="text-sm border rounded px-2 py-1">
+                </div>
+            </div>
+            
+            <div id="endpoints-container" class="space-y-2">
+                <!-- Routes will be loaded here via JavaScript -->
+                <div class="flex justify-center">
+                    <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-900"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <template id="route-template">
+        <div class="route-item border rounded-md overflow-hidden">
+            <div class="route-header flex items-center cursor-pointer p-3 hover:bg-gray-50">
+                <span class="badge method-badge mr-3">METHOD</span>
+                <span class="route-path font-mono text-gray-800 flex-grow">PATH</span>
+                <svg class="expand-icon w-5 h-5 transform transition-transform duration-200" 
+                     xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+            </div>
+            <div class="route-details bg-gray-50 border-t">
+                <div class="p-4">
+                    <div class="description text-gray-700 mb-4"></div>
+                    
+                    <div class="params-container mb-4">
+                        <h4 class="text-sm font-semibold mb-2">Path Parameters</h4>
+                        <div class="params-list">
+                            <div class="text-sm text-gray-500">No parameters</div>
+                        </div>
+                    </div>
+                    
+                    <div class="request-body-container mb-4">
+                        <h4 class="text-sm font-semibold mb-2">Request Body</h4>
+                        <div class="request-body">
+                            <div class="text-sm text-gray-500">No request body specified</div>
+                        </div>
+                    </div>
+                    
+                    <div class="responses-container">
+                        <h4 class="text-sm font-semibold mb-2">Responses</h4>
+                        <div class="responses-list">
+                            <!-- Response details will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Fetch routes data
+                const response = await fetch('{{ .Config.UIPath }}/data.json');
+                if (!response.ok) throw new Error('Failed to load routes data');
+                
+                const routes = await response.json();
+                renderRoutes(routes);
+                
+                // Set up filtering
+                document.getElementById('filterMethod').addEventListener('change', filterRoutes);
+                document.getElementById('searchEndpoint').addEventListener('input', filterRoutes);
+                
+            } catch (error) {
+                console.error('Error loading routes:', error);
+                document.getElementById('endpoints-container').innerHTML = 
+                    `<div class="text-center text-red-500 p-4">Error loading API routes: ${error.message}</div>`;
+            }
+        });
+        
+        function renderRoutes(routes) {
+            const container = document.getElementById('endpoints-container');
+            container.innerHTML = '';
+            
+            // Group routes if needed
+            const groupedRoutes = {};
+            routes.forEach(route => {
+                const group = route.group || 'default';
+                if (!groupedRoutes[group]) {
+                    groupedRoutes[group] = [];
+                }
+                groupedRoutes[group].push(route);
+            });
+            
+            // Render each group
+            Object.keys(groupedRoutes).sort().forEach(group => {
+                const groupRoutes = groupedRoutes[group];
+                
+                // Add group header if more than one group
+                if (Object.keys(groupedRoutes).length > 1) {
+                    const groupHeader = document.createElement('h3');
+                    groupHeader.className = 'text-lg font-semibold mt-6 mb-3 text-gray-700';
+                    groupHeader.textContent = group;
+                    container.appendChild(groupHeader);
+                }
+                
+                // Add routes in this group
+                groupRoutes.forEach(route => {
+                    const routeElement = createRouteElement(route);
+                    container.appendChild(routeElement);
+                });
+            });
+        }
+        
+        function createRouteElement(route) {
+            const template = document.getElementById('route-template');
+            const routeElement = template.content.cloneNode(true).firstElementChild;
+            
+            // Set method and route path
+            const methodBadge = routeElement.querySelector('.method-badge');
+            methodBadge.textContent = route.method;
+            methodBadge.classList.add(`badge-${route.method.toLowerCase()}`);
+            
+            routeElement.querySelector('.route-path').textContent = route.path;
+            
+            // Set description if available
+            const descriptionEl = routeElement.querySelector('.description');
+            if (route.description) {
+                descriptionEl.textContent = route.description;
+            } else {
+                descriptionEl.textContent = 'No description available';
+                descriptionEl.classList.add('text-gray-500', 'italic');
+            }
+            
+            // Set parameters
+            const paramsContainer = routeElement.querySelector('.params-list');
+            if (route.params && route.params.length > 0) {
+                paramsContainer.innerHTML = '';
+                
+                const paramsTable = document.createElement('table');
+                paramsTable.className = 'min-w-full text-sm';
+                
+                const thead = document.createElement('thead');
+                thead.innerHTML = `
+                    <tr class="border-b">
+                        <th class="text-left py-2 pr-4">Name</th>
+                        <th class="text-left py-2">Description</th>
+                    </tr>
+                `;
+                paramsTable.appendChild(thead);
+                
+                const tbody = document.createElement('tbody');
+                route.params.forEach(param => {
+                    const row = document.createElement('tr');
+                    row.className = 'border-b';
+                    row.innerHTML = `
+                        <td class="py-2 pr-4 font-mono">${param}</td>
+                        <td class="py-2 text-gray-600">Path parameter</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                
+                paramsTable.appendChild(tbody);
+                paramsContainer.appendChild(paramsTable);
+            }
+            
+            // Set request body if available
+            const requestBodyContainer = routeElement.querySelector('.request-body');
+            if (route.requestBody) {
+                requestBodyContainer.innerHTML = '';
+                const pre = document.createElement('pre');
+                pre.className = 'bg-gray-800 text-white p-3 rounded text-sm overflow-auto';
+                pre.textContent = JSON.stringify(route.requestBody, null, 2);
+                requestBodyContainer.appendChild(pre);
+            }
+            
+            // Set responses
+            const responsesContainer = routeElement.querySelector('.responses-list');
+            responsesContainer.innerHTML = '';
+            
+            if (route.responses && Object.keys(route.responses).length > 0) {
+                Object.entries(route.responses).forEach(([statusCode, response]) => {
+                    const responseEl = document.createElement('div');
+                    responseEl.className = 'mb-2 border rounded';
+                    
+                    const header = document.createElement('div');
+                    header.className = 'bg-gray-100 px-3 py-2 border-b flex items-center';
+                    
+                    const statusCodeSpan = document.createElement('span');
+                    statusCodeSpan.className = 'font-mono mr-2';
+                    statusCodeSpan.textContent = statusCode;
+                    
+                    const statusTextSpan = document.createElement('span');
+                    statusTextSpan.className = 'text-gray-600 text-sm';
+                    statusTextSpan.textContent = response.description || getStatusText(statusCode);
+                    
+                    header.appendChild(statusCodeSpan);
+                    header.appendChild(statusTextSpan);
+                    responseEl.appendChild(header);
+                    
+                    if (response.content) {
+                        const content = document.createElement('div');
+                        content.className = 'p-3';
+                        
+                        const pre = document.createElement('pre');
+                        pre.className = 'bg-gray-800 text-white p-3 rounded text-sm overflow-auto';
+                        pre.textContent = JSON.stringify(response.content, null, 2);
+                        
+                        content.appendChild(pre);
+                        responseEl.appendChild(content);
+                    }
+                    
+                    responsesContainer.appendChild(responseEl);
+                });
+            }
+            
+            // Set up toggling behavior
+            const routeHeader = routeElement.querySelector('.route-header');
+            const routeDetails = routeElement.querySelector('.route-details');
+            const expandIcon = routeElement.querySelector('.expand-icon');
+            
+            routeHeader.addEventListener('click', () => {
+                routeDetails.classList.toggle('expanded');
+                expandIcon.classList.toggle('rotate-180');
+            });
+            
+            // Store route data for filtering
+            routeElement.dataset.method = route.method;
+            routeElement.dataset.path = route.path;
+            
+            return routeElement;
+        }
+        
+        function filterRoutes() {
+            const methodFilter = document.getElementById('filterMethod').value;
+            const searchText = document.getElementById('searchEndpoint').value.toLowerCase();
+            
+            const routeElements = document.querySelectorAll('.route-item');
+            
+            routeElements.forEach(el => {
+                const method = el.dataset.method;
+                const path = el.dataset.path.toLowerCase();
+                
+                const methodMatch = !methodFilter || method === methodFilter;
+                const searchMatch = !searchText || path.includes(searchText);
+                
+                el.style.display = methodMatch && searchMatch ? 'block' : 'none';
+            });
+        }
+        
+        function getStatusText(code) {
+            const statusTexts = {
+                '200': 'OK',
+                '201': 'Created',
+                '204': 'No Content',
+                '400': 'Bad Request',
+                '401': 'Unauthorized',
+                '403': 'Forbidden',
+                '404': 'Not Found',
+                '500': 'Internal Server Error'
+            };
+            
+            return statusTexts[code] || 'Unknown Status';
+        }
+    </script>
+</body>
+</html>

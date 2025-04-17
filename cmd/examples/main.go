@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/yourusername/fiberdocs" // Import your package
+	"github.com/Benedict-Bsl/beautiful-routes" // Import your package
 )
 
 type EmailRequest struct {

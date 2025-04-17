@@ -2,7 +2,7 @@ package fiberdocs
 
 import (
 	"embed"
-	"encoding/json"
+	// "encoding/json"
 	"fmt"
 	"html/template"
 	"net/http"
